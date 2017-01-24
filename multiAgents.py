@@ -1,15 +1,15 @@
 # multiAgents.py
 # --------------
-# Licensing Information:  You are free to use or extend these projects for 
-# educational purposes provided that (1) you do not distribute or publish 
-# solutions, (2) you retain this notice, and (3) you provide clear 
-# attribution to UC Berkeley, including a link to 
+# Licensing Information:  You are free to use or extend these projects for
+# educational purposes provided that (1) you do not distribute or publish
+# solutions, (2) you retain this notice, and (3) you provide clear
+# attribution to UC Berkeley, including a link to
 # http://inst.eecs.berkeley.edu/~cs188/pacman/pacman.html
-# 
+#
 # Attribution Information: The Pacman AI projects were developed at UC Berkeley.
-# The core projects and autograders were primarily created by John DeNero 
+# The core projects and autograders were primarily created by John DeNero
 # (denero@cs.berkeley.edu) and Dan Klein (klein@cs.berkeley.edu).
-# Student side autograding was added by Brad Miller, Nick Hay, and 
+# Student side autograding was added by Brad Miller, Nick Hay, and
 # Pieter Abbeel (pabbeel@cs.berkeley.edu).
 
 
@@ -47,9 +47,7 @@ class ReflexAgent(Agent):
         bestScore = max(scores)
         bestIndices = [index for index in range(len(scores)) if scores[index] == bestScore]
         chosenIndex = random.choice(bestIndices) # Pick randomly among the best
-
         "Add more of your code here if you want to"
-
         return legalMoves[chosenIndex]
 
     def evaluationFunction(self, currentGameState, action):
@@ -71,30 +69,45 @@ class ReflexAgent(Agent):
         successorGameState = currentGameState.generatePacmanSuccessor(action)
         newPos = successorGameState.getPacmanPosition()
         newFood = successorGameState.getFood()
+        height, width = newFood.height, newFood.width
+
+        succ_capsulesLocations = successorGameState.getCapsules()
+        succ_numCapsulesLeft = len(succ_capsulesLocations)
+        curr_capsulesLocations = currentGameState.getCapsules()
+        curr_numCapsulesLeft = len(curr_capsulesLocations)
         newGhostStates = successorGameState.getGhostStates()
+        newGhostPositions = successorGameState.getGhostPositions()
         newScaredTimes = [ghostState.scaredTimer for ghostState in newGhostStates]
+        ghostsScared = [ghostState.scaredTimer != 0 for ghostState in newGhostStates]
+        nextScore = successorGameState.getScore()
+
+        #calculate distance to ghosts
+        dist_to_ghosts = [util.manhattanDistance( newPos, ghostPos) for ghostPos in newGhostPositions]
+
+        #calculate ghost reflax
+        chase_ghosts_value = [ch_val[0]-ch_val[1] for ch_val in zip(newScaredTimes,dist_to_ghosts)]
+        chase_ghosts_score = sum([ch_scr[0]*ch_scr[1] for ch_scr in zip(ghostsScared,chase_ghosts_value)])
+        flee_ghosts_score = sum([(not fl_scr[0])*fl_scr[1] for fl_scr in zip(ghostsScared,dist_to_ghosts)])
+        ghost_reflax = -20/(1+flee_ghosts_score)
+        #was a dot eaten?
+        ate_a_dot = currentGameState.getNumFood() - successorGameState.getNumFood()
+
+        #calculate minimum and average manhattan distance to food
+        dist_to_closest_food = height + width + 1
+        for i in range(width):
+            for j in range(height):
+                if newFood[i][j]:
+                    dist = util.manhattanDistance( newPos, (i,j) )
+                    if  dist < dist_to_closest_food:
+                        dist_to_closest_food = dist
+
+        if dist_to_closest_food == height + width + 1:
+            dist_to_closest_food = 0
+
 
         "*** YOUR CODE HERE ***"
-        min_dis_to_ghost = float("inf") 
-        for ghost in newGhostStates:
-            ghost_pos = ghost.getPosition()
-            min_dis_to_ghost = min(min_dis_to_ghost,
-                    util.manhattanDistance(newPos, ghost_pos))
-        min_dis_to_food = float("inf")
-        sum_dis_to_food = 0
-        food_list = newFood.asList()
-        cur_food_count = currentGameState.getFood().count()
-        for food in food_list:
-            dis_to_food = util.manhattanDistance(food, newPos)
-            min_dis_to_food = min(min_dis_to_food, dis_to_food)
-            sum_dis_to_food += dis_to_food
-        kEps = 0.01
-        avg_dis_to_food = sum_dis_to_food/float(cur_food_count) \
-                if cur_food_count>0 else 0
-        suc_food_count = newFood.count()
-        #print(action, "min_dis", min_dis_to_food,"avg_dis", avg_dis_to_food)
-        return  1.0/(suc_food_count+kEps)-1.0/(min_dis_to_ghost+0.1) #+ 1.0/(avg_dis_to_food + kEps)
-        return successorGameState.getScore()
+        evaluation_score =  successorGameState.getScore() + (height + width + 1)*ate_a_dot - 2*dist_to_closest_food + ghost_reflax# + 50*ate_a_capsule + capsule_reflax
+        return  evaluation_score
 
 def scoreEvaluationFunction(currentGameState):
     """
@@ -235,4 +248,3 @@ def betterEvaluationFunction(currentGameState):
 
 # Abbreviation
 better = betterEvaluationFunction
-
