@@ -188,7 +188,7 @@ class MinimaxAgent(MultiAgentSearchAgent):
     def minValue(self, state, depth, agent_idx):
         if state.isWin() or state.isLose():
             return self.evaluationFunction(state), None
-        # func(state, depth) 
+        # func(state, depth)
         if agent_idx == state.getNumAgents() - 1:
             func = self.maxValue
         else:
@@ -219,7 +219,60 @@ class AlphaBetaAgent(MultiAgentSearchAgent):
           Returns the minimax action using self.depth and self.evaluationFunction
         """
         "*** YOUR CODE HERE ***"
+        alpha = -float("inf")
+        beta = float("inf")
+        v, action = self.maxValue(gameState, 0,alpha,beta)
+        print(v, action, self.depth)
+        return action
         util.raiseNotDefined()
+
+    def maxValue(self, state, prev_depth, alpha, beta):
+        depth = prev_depth+1
+        if depth > self.depth or state.isWin() or state.isLose():
+            return self.evaluationFunction(state), None
+
+        best_v, best_action = -float("inf"), None
+        pacman_idx, agent_start_idx = 0, 1
+        """
+        print(depth, "pacman has " + str(len(state.getLegalActions(pacman_idx)))\
+                +"legal actions")
+                """
+        for action in state.getLegalActions(pacman_idx):
+            successor_state = state.generateSuccessor(pacman_idx, action)
+            v,_ = self.minValue(successor_state, depth, agent_start_idx, alpha, beta)
+            if v > best_v:
+                best_v, best_action = v, action
+            if v > beta:
+                return best_v, best_action
+            alpha = max(alpha,best_v)
+        return best_v, best_action
+
+    def minValue(self, state, depth, agent_idx, alpha, beta):
+        if state.isWin() or state.isLose():
+            return self.evaluationFunction(state), None
+        # func(state, depth)
+        if agent_idx == state.getNumAgents() - 1:
+            func = self.maxValue
+        else:
+            next_agent_idx = agent_idx+1
+            func = lambda nstate, depth, alpha, beta: self.minValue(nstate, depth,
+                    next_agent_idx, alpha, beta)
+
+        best_v, best_action = float("inf"), None
+        """
+        print(depth, "agent"+str(agent_idx)+" has " \
+                + str(len(state.getLegalActions(agent_idx)))\
+                +"legal actions")
+                """
+        for action in state.getLegalActions(agent_idx):
+            successor_state = state.generateSuccessor(agent_idx, action)
+            v,_ = func(successor_state, depth, alpha, beta)
+            if v < best_v:
+                best_v, best_action = v, action
+            if v < alpha:
+                return best_v, best_action
+            beta = min(beta,best_v)
+        return best_v, best_action
 
 class ExpectimaxAgent(MultiAgentSearchAgent):
     """
@@ -260,7 +313,7 @@ class ExpectimaxAgent(MultiAgentSearchAgent):
     def expValue(self, state, depth, agent_idx):
         if state.isWin() or state.isLose():
             return self.evaluationFunction(state), None
-        # func(state, depth) 
+        # func(state, depth)
         if agent_idx == state.getNumAgents() - 1:
             func = self.maxValue
         else:
@@ -281,7 +334,7 @@ class ExpectimaxAgent(MultiAgentSearchAgent):
             v_sum += v
             cnt += 1
         expectation = v_sum / float(cnt)
-        return expectation, None 
+        return expectation, None
 
 def betterEvaluationFunction(currentGameState):
     """
