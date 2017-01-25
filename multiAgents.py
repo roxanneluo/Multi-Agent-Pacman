@@ -88,7 +88,7 @@ class ReflexAgent(Agent):
         chase_ghosts_value = [ch_val[0]-ch_val[1] for ch_val in zip(newScaredTimes,dist_to_ghosts)]
         chase_ghosts_score = sum([ch_scr[0]*ch_scr[1] for ch_scr in zip(ghostsScared,chase_ghosts_value)])
         flee_ghosts_score = sum([(not fl_scr[0])*fl_scr[1] for fl_scr in zip(ghostsScared,dist_to_ghosts)])
-        ghost_reflax = -20/(1+flee_ghosts_score)
+        ghost_reflax = -10/(1+flee_ghosts_score)
         #was a dot eaten?
         ate_a_dot = currentGameState.getNumFood() - successorGameState.getNumFood()
 
@@ -106,7 +106,9 @@ class ReflexAgent(Agent):
 
 
         "*** YOUR CODE HERE ***"
-        evaluation_score =  successorGameState.getScore() + (height + width + 1)*ate_a_dot - 2*dist_to_closest_food + ghost_reflax# + 50*ate_a_capsule + capsule_reflax
+        #evaluation_score =  successorGameState.getScore() + (height + width + 1)*ate_a_dot - 2*dist_to_closest_food + ghost_reflax# + 50*ate_a_capsule + capsule_reflax
+        evaluation_score =  successorGameState.getScore() - \
+        5.0/(height+width)*dist_to_closest_food -1 + ghost_reflax# + 50*ate_a_capsule + capsule_reflax
         return  evaluation_score
 
 def scoreEvaluationFunction(currentGameState):
@@ -294,6 +296,7 @@ class ExpectimaxAgent(MultiAgentSearchAgent):
 
     def maxValue(self, state, prev_depth):
         depth = prev_depth+1
+    #    print("depth", depth)
         if depth > self.depth or state.isWin() or state.isLose():
             return self.evaluationFunction(state), None
 
@@ -344,6 +347,45 @@ def betterEvaluationFunction(currentGameState):
       DESCRIPTION: <write something here so we know what you did>
     """
     "*** YOUR CODE HERE ***"
+    newPos = currentGameState.getPacmanPosition()
+    newFood = currentGameState.getFood()
+    height, width = newFood.height, newFood.width
+
+    newGhostStates = currentGameState.getGhostStates()
+    newGhostPositions = currentGameState.getGhostPositions()
+    newScaredTimes = [ghostState.scaredTimer for ghostState in newGhostStates]
+    ghostsScared = [ghostState.scaredTimer != 0 for ghostState in newGhostStates]
+    nextScore = currentGameState.getScore()
+
+    #calculate distance to ghosts
+    dist_to_ghosts = [util.manhattanDistance( newPos, ghostPos) for ghostPos in newGhostPositions]
+
+    #calculate ghost reflax
+    chase_ghosts_value = [ch_val[0]-ch_val[1] for ch_val in zip(newScaredTimes,dist_to_ghosts)]
+    chase_ghosts_score = sum([ch_scr[0]*ch_scr[1] for ch_scr in zip(ghostsScared,chase_ghosts_value)])
+    flee_ghosts_score = sum([(not fl_scr[0])*fl_scr[1] for fl_scr in zip(ghostsScared,dist_to_ghosts)])
+    ghost_reflax = -10/(1+flee_ghosts_score)
+    num_food = currentGameState.getNumFood()
+
+    #calculate minimum and average manhattan distance to food
+    dist_to_closest_food = height + width + 1
+    for i in range(width):
+        for j in range(height):
+            if newFood[i][j]:
+                dist = util.manhattanDistance( newPos, (i,j) )
+                if  dist < dist_to_closest_food:
+                    dist_to_closest_food = dist
+
+    if dist_to_closest_food == height + width + 1:
+        dist_to_closest_food = 0
+
+
+    evaluation_score =  currentGameState.getScore() \
+    -9.0/(height+width)*dist_to_closest_food# + ghost_reflax# + 50*ate_a_capsule + capsule_reflax
+   # print("dist_to_closest", dist_to_closest_food,
+   #         9.0/(height+width)*dist_to_closest_food,
+   #         "eval", evaluation_score)
+    return evaluation_score
     util.raiseNotDefined()
 
 # Abbreviation
